@@ -20,8 +20,12 @@ sam2_checkpoint = "../checkpoints/sam2.1_hiera_small.pt"
 model_cfg = "configs/sam2.1/sam2.1_hiera_s.yaml"
 predictor = build_sam2_camera_predictor(model_cfg, sam2_checkpoint)
 
+# Load the video
+video_path = "/home/ubuntu/.cache/huggingface/lerobot/trlc/full_data_set/videos/chunk-000/observation.images.cam_head/episode_000008.mp4"
+print(f"Loading video from {video_path}")
+
 # Open video and read first frame
-cap = cv2.VideoCapture("/home/ubuntu/trlc/segment-anything-2-real-time/notebooks/out_h264.mp4")
+cap = cv2.VideoCapture(video_path)
 ret, first_frame = cap.read()
 if not ret:
     raise RuntimeError("Failed to read first frame from video.")
@@ -70,6 +74,7 @@ _, out_obj_ids, out_mask_logits = predictor.add_new_prompt(
 
 # Process subsequent frames and display red mask overlay
 masked_frames = []
+cap.set(cv2.CAP_PROP_POS_FRAMES, 0)
 
 while True:
     ret, frame = cap.read()
@@ -103,6 +108,16 @@ while True:
     if cv2.waitKey(1) & 0xFF == ord('q'):
         break
     
+print("Press 'y' to confirm and save the video, or any other key to discard.")
+key = cv2.waitKey(0)
+if key == ord('y'):
+    print("Video confirmed. Proceeding to save...")
+    # You can call encode_masked_frames or any saving logic here
+else:
+    raise ValueError("Video discarded.")
+
+
+
 cap.release()
 cv2.destroyAllWindows()
 
@@ -179,7 +194,7 @@ def encode_masked_frames(
 # — then at the bottom of your main script —
 encode_masked_frames(
     masked_frames,
-    video_path="./output.mp4",
+    video_path=video_path,
     fps=30,
     vcodec="libsvtav1",
     pix_fmt="yuv420p",
